@@ -3,6 +3,8 @@ export type Side = 'right' | 'left';
 
 export interface DisplayState {
   sectionId: string;
+  startNode: string;
+  endNode: string;
   direction: Direction;
   side: Side;
   shotNo: number;
@@ -10,6 +12,8 @@ export interface DisplayState {
 
 export const DEFAULT_STATE: DisplayState = {
   sectionId: '203',
+  startNode: '',
+  endNode: '',
   direction: 'forward',
   side: 'right',
   shotNo: 1
@@ -28,6 +32,8 @@ export function sideLabel(side: Side): string {
 export function normalizeDisplayState(state: Partial<DisplayState>): DisplayState {
   return {
     sectionId: (state.sectionId ?? DEFAULT_STATE.sectionId).trim() || DEFAULT_STATE.sectionId,
+    startNode: (state.startNode ?? DEFAULT_STATE.startNode).trim(),
+    endNode: (state.endNode ?? DEFAULT_STATE.endNode).trim(),
     direction: state.direction === 'reverse' ? 'reverse' : 'forward',
     side: state.side === 'left' ? 'left' : 'right',
     shotNo: Number.isFinite(state.shotNo) && (state.shotNo ?? 0) > 0 ? Math.trunc(state.shotNo ?? DEFAULT_STATE.shotNo) : DEFAULT_STATE.shotNo
@@ -82,18 +88,22 @@ export function displayStateFromText(text: string): DisplayState | null {
     return null;
   }
 
-  const hasAny = ['sectionId', 'direction', 'side', 'shotNo'].some((key) => params.has(key));
+  const hasAny = ['sectionId', 'startNode', 'endNode', 'direction', 'side', 'shotNo'].some((key) => params.has(key));
   if (!hasAny) {
     return null;
   }
 
   const sectionId = params.get('sectionId') ?? DEFAULT_STATE.sectionId;
+  const startNode = params.get('startNode') ?? DEFAULT_STATE.startNode;
+  const endNode = params.get('endNode') ?? DEFAULT_STATE.endNode;
   const direction = params.get('direction') === 'reverse' ? 'reverse' : 'forward';
   const side = params.get('side') === 'left' ? 'left' : 'right';
   const shotNoRaw = Number.parseInt(params.get('shotNo') ?? '', 10);
 
   return normalizeDisplayState({
     sectionId,
+    startNode,
+    endNode,
     direction,
     side,
     shotNo: Number.isFinite(shotNoRaw) && shotNoRaw > 0 ? shotNoRaw : DEFAULT_STATE.shotNo
@@ -111,9 +121,7 @@ export function readInitialDisplayState(): DisplayState {
     if (fromStorage) {
       return fromStorage;
     }
-  } catch {
-    // 保存領域未対応端末向けの既定値処理
-  }
+  } catch {}
 
   return DEFAULT_STATE;
 }

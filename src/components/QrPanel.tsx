@@ -14,8 +14,7 @@ export function QrPanel({ state, qrSvg, generating, copied, onCopy, onStateChang
     <section className="card card-qr">
       <div className="card-header">
         <div>
-          <p className="card-kicker">QRコード</p>
-          <h2>共有用の状態</h2>
+          <h2>PGV2用 webカチンコ</h2>
         </div>
         <div className="scanner-actions">
           <button className="secondary-button" type="button" onClick={onCopy}>
@@ -43,6 +42,28 @@ export function QrPanel({ state, qrSvg, generating, copied, onCopy, onStateChang
             value={state.sectionId}
             onChange={(event) => onStateChange({ sectionId: event.target.value })}
             placeholder="203"
+            inputMode="text"
+          />
+        </label>
+
+        <label className="compact-field">
+          <span>開始ノード</span>
+          <input
+            type="text"
+            value={state.startNode}
+            onChange={(event) => onStateChange({ startNode: event.target.value })}
+            placeholder="A1"
+            inputMode="text"
+          />
+        </label>
+
+        <label className="compact-field">
+          <span>終了ノード</span>
+          <input
+            type="text"
+            value={state.endNode}
+            onChange={(event) => onStateChange({ endNode: event.target.value })}
+            placeholder="B1"
             inputMode="text"
           />
         </label>
