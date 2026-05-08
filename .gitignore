@@ -1,3 +1,5 @@
-.vercel
+.vercel/*
+!.vercel/
+!.vercel/project.json
 dist/
 node_modules/
