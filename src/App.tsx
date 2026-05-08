@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { QrPanel } from './components/QrPanel';
 import { buildQrSvg, buildShareUrl } from './lib/qr';
-import { DEFAULT_STATE, DisplayState, displayStateToStorage, readInitialDisplayState, STORAGE_KEY } from './lib/state';
+import { DisplayState, displayStateToStorage, readInitialDisplayState, STORAGE_KEY } from './lib/state';
 
 export default function App() {
   const [state, setState] = useState<DisplayState>(() => readInitialDisplayState());
@@ -60,10 +60,6 @@ export default function App() {
     }));
   };
 
-  const resetState = () => {
-    setState(DEFAULT_STATE);
-  };
-
   const copyShareUrl = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -82,7 +78,6 @@ export default function App() {
         generating={generating}
         copied={copied}
         onCopy={copyShareUrl}
-        onReset={resetState}
         onStateChange={updateState}
       />
     </div>

@@ -6,11 +6,10 @@ interface QrPanelProps {
   generating: boolean;
   copied: boolean;
   onCopy: () => void;
-  onReset: () => void;
   onStateChange: (patch: Partial<DisplayState>) => void;
 }
 
-export function QrPanel({ state, qrSvg, generating, copied, onCopy, onReset, onStateChange }: QrPanelProps) {
+export function QrPanel({ state, qrSvg, generating, copied, onCopy, onStateChange }: QrPanelProps) {
   return (
     <section className="card card-qr">
       <div className="card-header">
@@ -19,9 +18,6 @@ export function QrPanel({ state, qrSvg, generating, copied, onCopy, onReset, onS
           <h2>共有用の状態</h2>
         </div>
         <div className="scanner-actions">
-          <button className="secondary-button" type="button" onClick={onReset}>
-            初期値へ戻す
-          </button>
           <button className="secondary-button" type="button" onClick={onCopy}>
             {copied ? 'コピー済み' : 'URLをコピー'}
           </button>
