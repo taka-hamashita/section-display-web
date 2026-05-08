@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { QrPanel } from './components/QrPanel';
-import { buildQrSvg, buildShareUrl } from './lib/qr';
+import { buildQrDownloadName, buildQrSvg, buildShareUrl, copyQrImage, saveQrImage } from './lib/qr';
 import { DisplayState, displayStateToStorage, readInitialDisplayState, STORAGE_KEY } from './lib/state';
 
 export default function App() {
   const [state, setState] = useState<DisplayState>(() => readInitialDisplayState());
   const [qrSvg, setQrSvg] = useState('');
   const [generating, setGenerating] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
+  const [qrCopied, setQrCopied] = useState(false);
+  const [qrSaved, setQrSaved] = useState(false);
 
   const shareUrl = buildShareUrl(state);
+  const qrFileName = buildQrDownloadName(state);
 
   useEffect(() => {
     try {
@@ -63,10 +66,32 @@ export default function App() {
   const copyShareUrl = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
+      setUrlCopied(true);
+      window.setTimeout(() => setUrlCopied(false), 1200);
     } catch {
-      setCopied(false);
+      setUrlCopied(false);
+    }
+  };
+
+  const copyQrCode = async () => {
+    try {
+      const copiedImage = await copyQrImage(qrSvg);
+      if (copiedImage) {
+        setQrCopied(true);
+        window.setTimeout(() => setQrCopied(false), 1200);
+      }
+    } catch {
+      setQrCopied(false);
+    }
+  };
+
+  const saveQrCode = async () => {
+    try {
+      await saveQrImage(qrSvg, qrFileName);
+      setQrSaved(true);
+      window.setTimeout(() => setQrSaved(false), 1200);
+    } catch {
+      setQrSaved(false);
     }
   };
 
@@ -76,8 +101,12 @@ export default function App() {
         state={state}
         qrSvg={qrSvg}
         generating={generating}
-        copied={copied}
-        onCopy={copyShareUrl}
+        urlCopied={urlCopied}
+        qrCopied={qrCopied}
+        qrSaved={qrSaved}
+        onCopyUrl={copyShareUrl}
+        onCopyQr={copyQrCode}
+        onSaveQr={saveQrCode}
         onStateChange={updateState}
       />
     </div>

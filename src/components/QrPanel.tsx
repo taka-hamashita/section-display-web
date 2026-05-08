@@ -4,21 +4,38 @@ interface QrPanelProps {
   state: DisplayState;
   qrSvg: string;
   generating: boolean;
-  copied: boolean;
-  onCopy: () => void;
+  urlCopied: boolean;
+  qrCopied: boolean;
+  qrSaved: boolean;
+  onCopyUrl: () => void;
+  onCopyQr: () => void;
+  onSaveQr: () => void;
   onStateChange: (patch: Partial<DisplayState>) => void;
 }
 
-export function QrPanel({ state, qrSvg, generating, copied, onCopy, onStateChange }: QrPanelProps) {
+export function QrPanel({
+  state,
+  qrSvg,
+  generating,
+  urlCopied,
+  qrCopied,
+  qrSaved,
+  onCopyUrl,
+  onCopyQr,
+  onSaveQr,
+  onStateChange
+}: QrPanelProps) {
+  const qrActionDisabled = generating || qrSvg.length === 0;
+
   return (
     <section className="card card-qr">
       <div className="card-header">
         <div>
           <h2>PGV2用 webカチンコ</h2>
         </div>
-        <div className="scanner-actions">
-          <button className="secondary-button" type="button" onClick={onCopy}>
-            {copied ? 'コピー済み' : 'URLをコピー'}
+        <div className="panel-actions">
+          <button className="secondary-button" type="button" onClick={onCopyUrl}>
+            {urlCopied ? 'コピー済み' : 'URLをコピー'}
           </button>
         </div>
       </div>
@@ -32,6 +49,25 @@ export function QrPanel({ state, qrSvg, generating, copied, onCopy, onStateChang
         ) : (
           <div className="qr-svg" dangerouslySetInnerHTML={{ __html: qrSvg }} />
         )}
+      </div>
+
+      <div className="qr-actions">
+        <button
+          className="secondary-button secondary-button-compact"
+          type="button"
+          onClick={onCopyQr}
+          disabled={qrActionDisabled}
+        >
+          {qrCopied ? 'コピー済み' : 'QRをコピー'}
+        </button>
+        <button
+          className="secondary-button secondary-button-compact"
+          type="button"
+          onClick={onSaveQr}
+          disabled={qrActionDisabled}
+        >
+          {qrSaved ? '保存済み' : 'QRを保存'}
+        </button>
       </div>
 
       <div className="control-grid control-grid-compact">

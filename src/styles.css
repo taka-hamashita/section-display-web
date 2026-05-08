@@ -92,11 +92,20 @@ button {
   color: var(--accent-strong);
 }
 
-.scanner-actions {
+.panel-actions,
+.qr-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.panel-actions {
   justify-content: flex-end;
+}
+
+.qr-actions {
+  width: 100%;
+  justify-content: center;
 }
 
 .secondary-button {
@@ -107,6 +116,16 @@ button {
   border-radius: 12px;
   box-shadow: 0 8px 18px rgba(29, 78, 216, 0.12);
   font-weight: 700;
+}
+
+.secondary-button-compact {
+  flex: 1 1 140px;
+  max-width: 180px;
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .qr-frame {
@@ -347,6 +366,10 @@ button {
   .qr-frame {
     width: min(100%, 280px);
   }
+
+  .secondary-button-compact {
+    max-width: none;
+  }
 }
 
 @media (max-width: 390px) {
@@ -360,6 +383,10 @@ button {
 
   .chip {
     padding: 8px 0;
+  }
+
+  .qr-actions {
+    gap: 6px;
   }
 }
 
