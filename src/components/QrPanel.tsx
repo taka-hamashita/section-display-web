@@ -2,14 +2,15 @@ import type { DisplayState } from '../lib/state';
 
 interface QrPanelProps {
   state: DisplayState;
-  payload: string;
   qrSvg: string;
   generating: boolean;
   copied: boolean;
   onCopy: () => void;
+  onReset: () => void;
+  onStateChange: (patch: Partial<DisplayState>) => void;
 }
 
-export function QrPanel({ state, payload, qrSvg, generating, copied, onCopy }: QrPanelProps) {
+export function QrPanel({ state, qrSvg, generating, copied, onCopy, onReset, onStateChange }: QrPanelProps) {
   return (
     <section className="card card-qr">
       <div className="card-header">
@@ -17,46 +18,90 @@ export function QrPanel({ state, payload, qrSvg, generating, copied, onCopy }: Q
           <p className="card-kicker">QRコード</p>
           <h2>共有用の状態</h2>
         </div>
-        <button className="secondary-button" type="button" onClick={onCopy}>
-          {copied ? 'コピー済み' : 'URLをコピー'}
-        </button>
+        <div className="scanner-actions">
+          <button className="secondary-button" type="button" onClick={onReset}>
+            初期値へ戻す
+          </button>
+          <button className="secondary-button" type="button" onClick={onCopy}>
+            {copied ? 'コピー済み' : 'URLをコピー'}
+          </button>
+        </div>
       </div>
 
       <div className="qr-frame" aria-busy={generating}>
         {generating ? (
           <div className="qr-loading">
             <div className="spinner" />
-            <p>QRを生成中</p>
+            <p>生成中</p>
           </div>
         ) : (
           <div className="qr-svg" dangerouslySetInnerHTML={{ __html: qrSvg }} />
         )}
       </div>
 
-      <dl className="summary-list">
-        <div>
-          <dt>セクションID</dt>
-          <dd>{state.sectionId || '未設定'}</dd>
-        </div>
-        <div>
-          <dt>順逆</dt>
-          <dd>{state.direction === 'forward' ? '順' : '逆'}</dd>
-        </div>
-        <div>
-          <dt>左右</dt>
-          <dd>{state.side === 'right' ? '右' : '左'}</dd>
-        </div>
-        <div>
-          <dt>撮影回数</dt>
-          <dd>{state.shotNo}</dd>
-        </div>
-      </dl>
+      <div className="control-grid control-grid-compact">
+        <label className="compact-field">
+          <span>セクションID</span>
+          <input
+            type="text"
+            value={state.sectionId}
+            onChange={(event) => onStateChange({ sectionId: event.target.value })}
+            placeholder="203"
+            inputMode="text"
+          />
+        </label>
 
-      <label className="payload-box">
-        <span>QRの内容</span>
-        <textarea readOnly rows={3} value={payload} />
-      </label>
+        <div className="compact-field">
+          <span>順逆</span>
+          <div className="toggle-buttons">
+            <button
+              type="button"
+              className={state.direction === 'forward' ? 'chip chip-active' : 'chip'}
+              onClick={() => onStateChange({ direction: 'forward' })}
+            >
+              順
+            </button>
+            <button
+              type="button"
+              className={state.direction === 'reverse' ? 'chip chip-active' : 'chip'}
+              onClick={() => onStateChange({ direction: 'reverse' })}
+            >
+              逆
+            </button>
+          </div>
+        </div>
+
+        <div className="compact-field">
+          <span>左右</span>
+          <div className="toggle-buttons">
+            <button
+              type="button"
+              className={state.side === 'right' ? 'chip chip-active' : 'chip'}
+              onClick={() => onStateChange({ side: 'right' })}
+            >
+              右
+            </button>
+            <button
+              type="button"
+              className={state.side === 'left' ? 'chip chip-active' : 'chip'}
+              onClick={() => onStateChange({ side: 'left' })}
+            >
+              左
+            </button>
+          </div>
+        </div>
+
+        <label className="compact-field">
+          <span>撮影回数</span>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={state.shotNo}
+            onChange={(event) => onStateChange({ shotNo: Math.max(1, Number.parseInt(event.target.value || '1', 10) || 1) })}
+          />
+        </label>
+      </div>
     </section>
   );
 }
-
