@@ -15,7 +15,6 @@ export function buildShareUrl(state: DisplayState): string {
   url.searchParams.set('direction', state.direction);
   url.searchParams.set('side', state.side);
   url.searchParams.set('shotNo', String(state.shotNo > 0 ? state.shotNo : 1));
-  url.searchParams.set('v', '2');
   return url.toString();
 }
 
