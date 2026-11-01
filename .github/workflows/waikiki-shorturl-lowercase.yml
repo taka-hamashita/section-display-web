@@ -1,0 +1,33 @@
+name: Make Lowercase Waikiki URL
+on:
+  push:
+    paths: [".github/workflows/waikiki-shorturl-lowercase.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Register and verify lowercase-only URL
+        env:
+          TARGET_URL: https://rawcdn.githack.com/taka-hamashita/section-display-web/4e2e15e0a36a0569111dbdacabae59b03c694636/public/waikiki-breakfast/index.html
+        run: |
+          set -euo pipefail
+          for alias in waikikibreakfast26 waikikimap2026 waikikiasagohan2026; do
+            result="$(curl -sS --max-time 20 -G --data-urlencode "format=simple" --data-urlencode "url=$TARGET_URL" --data-urlencode "shorturl=$alias" https://is.gd/create.php || true)"
+            if [[ "$result" != "https://is.gd/$alias" ]]; then
+              echo "Alias not assigned: $alias"
+              continue
+            fi
+            location="$(curl -fsSI --max-time 20 "$result" | tr -d '\r' | awk 'tolower($1)=="location:" {$1=""; sub(/^ /,""); print; exit}')"
+            if [[ "$location" == "$TARGET_URL" ]]; then
+              echo "VALIDATED_LOWERCASE_SHORT_URL=$result"
+              echo "REDIRECT_MATCH=true"
+              exit 0
+            fi
+            echo "Unexpected redirect for $alias: $location"
+          done
+          echo "Unable to issue verified lowercase URL"
+          exit 1
