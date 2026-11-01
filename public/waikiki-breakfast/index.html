@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#dbf6f7">
+  <meta name="description" content="ハワイ社員旅行の朝ごはん探しに。ローマーハウス・ワイキキから9店舗の位置と徒歩ルートがわかるインタラクティブマップ。">
+  <title>ワイキキ朝食レストランマップ | ハワイ社員旅行</title>
+  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzx0UqgBVJJ0m1Yj40M5P6lM=" crossorigin="">
+  <style>
+    /* 01. サイト全体に共通する色と基本サイズを定義する。 */
+    :root {
+      --ink: #164854;
+      --muted: #5b7980;
+      --teal: #137f94;
+      --teal-dark: #08677c;
+      --pale: #e8f9fa;
+      --pale-2: #d0f0f3;
+      --coral: #ee6f71;
+      --coral-dark: #d4525c;
+      --paper: #ffffff;
+      --border: #d7e9e9;
+      --shadow: 0 12px 38px rgba(28, 102, 117, .105);
+      --radius: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+      color: var(--ink);
+      background: #f5fbfa;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; min-width: 320px; }
+    button, input, select, a { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid #f49e69;
+      outline-offset: 3px;
+    }
+    a { color: var(--teal-dark); }
+    .shell { width: min(1260px, calc(100% - 40px)); margin: 0 auto; }
+    .eyebrow { font-size: 12px; font-weight: 900; letter-spacing: .19em; text-transform: uppercase; }
+
+    /* 02. 海と朝日をイメージしたヘッダー。写真・イラスト地図は使用しない。 */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(122deg, #d6f5f5 0%, #e8f9f8 55%, #fff0e6 100%);
+      border-bottom: 1px solid #d9eeee;
+      padding: 25px 0 33px;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      width: 260px; height: 260px;
+      right: max(-105px, calc((100vw - 1370px) / 2)); top: -113px;
+      border-radius: 50%; background: rgba(255, 197, 156, .42);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 560px; height: 200px;
+      left: -150px; bottom: -175px;
+      border-radius: 50%; border: 34px solid rgba(255,255,255,.48);
+    }
+    .hero-inner { position: relative; z-index: 1; }
+    .topline { display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 950; color: #127f8b; letter-spacing: .05em; }
+    .brand-mark { display: grid; place-items: center; border-radius: 14px; width: 39px; height: 39px; background: var(--teal); color: #fff; font-weight: 900; font-size: 18px; box-shadow: 0 7px 15px #167e9426; }
+    .trip-tag { padding: 9px 14px; background: rgba(255,255,255,.77); border: 1px solid rgba(255,255,255,.9); border-radius: 100px; font-size: 12px; font-weight: 800; }
+    h1 { margin: 0; font-size: clamp(26px, 4.9vw, 46px); line-height: 1.32; letter-spacing: -.045em; font-weight: 950; }
+    .hero-copy { margin: 9px 0 0; font-size: clamp(14px,2.1vw,18px); color: #4d7b83; font-weight: 700; }
+    .hero-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 21px; }
+    .hero-pill { display: inline-flex; gap: 8px; align-items: center; min-height: 34px; padding: 7px 12px; color: #236976; background: rgba(255,255,255,.72); border-radius: 100px; font-size: 12px; font-weight: 800; }
+    .hero-pill::before { content: ""; background: #20a4a1; border-radius: 50%; width: 7px; height: 7px; }
+
+    /* 03. マップはスマートフォンでも画面の主役になる高さを確保する。 */
+    main { padding: 27px 0 62px; }
+    .map-heading { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; justify-content: space-between; margin-bottom: 14px; }
+    .section-label { margin: 0 0 5px; color: var(--teal); }
+    h2 { margin: 0; font-size: clamp(20px,2.5vw,27px); letter-spacing: -.03em; }
+    .map-tools { display: flex; flex-wrap: wrap; gap: 9px; }
+    .tool-button { min-height: 45px; padding: 0 16px; border-radius: 13px; border: 1px solid #b6d9dc; background: white; color: #136879; font-size: 13px; font-weight: 850; box-shadow: 0 3px 8px #16485409; }
+    .tool-button:hover { background: #eefaf9; }
+    .tool-button.hot { color: #b94d56; background: #fff3f1; border-color: #f2bfc0; }
+    .map-frame { overflow: hidden; position: relative; border-radius: 25px; background: #cae9ee; border: 1px solid #bedde2; box-shadow: var(--shadow); }
+    #map { width: 100%; height: clamp(480px, 61vh, 680px); z-index: 1; }
+    .map-status { position: absolute; left: 17px; top: 17px; z-index: 500; background: rgba(255,255,255,.96); border: 1px solid #d6e7e8; box-shadow: 0 6px 20px rgba(0,0,0,.09); border-radius: 13px; padding: 11px 14px; color: #306f7b; font-size: 12px; font-weight: 850; pointer-events: none; max-width: calc(100% - 95px); }
+    .map-status strong { color: var(--coral-dark); }
+    .map-error { position: absolute; inset: 0; z-index: 750; display: flex; flex-direction: column; gap: 12px; justify-content: center; align-items: center; text-align: center; padding: 30px; background: #e7f5f6; }
+    .map-error[hidden] { display: none; }
+    .map-error p { max-width: 420px; margin: 0; line-height: 1.8; }
+    .map-caption { display: flex; gap: 15px; align-items: flex-start; flex-wrap: wrap; padding: 15px 3px 2px; }
+    .legend { display: flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 12px; font-weight: 850; }
+    .dot { width: 13px; height: 13px; border-radius: 50%; background: #168db6; box-shadow: 0 0 0 3px #cde9f6; }
+    .dot.red { background: var(--coral); box-shadow: 0 0 0 3px #ffdbd7; }
+    .map-hint { flex: 1 1 260px; line-height: 1.6; color: var(--muted); font-size: 11px; margin: 0; }
+
+    /* 04. 宿泊ホテルの情報をカードとして先に強調表示する。 */
+    .hotel-card { display: flex; align-items: center; gap: 17px; padding: 20px 23px; margin: 23px 0 37px; border: 1px solid #f5c8c4; background: linear-gradient(115deg,#fff9f5,#fff); border-radius: 21px; box-shadow: 0 5px 20px #dd69790a; }
+    .hotel-emblem { flex: 0 0 56px; height: 56px; border-radius: 17px; display: grid; place-items: center; background: #f46f73; color: #fff; font-size: 23px; font-weight: 950; }
+    .hotel-text { flex: 1; min-width: 0; }
+    .hotel-overline { display: block; color: var(--coral-dark); font-weight: 900; font-size: 11px; letter-spacing: .08em; margin-bottom: 4px; }
+    .hotel-text h3 { margin: 0 0 4px; font-size: 18px; }
+    .hotel-text p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+    .hotel-action { flex: 0 0 auto; padding: 12px 15px; background: #fff; border: 1px solid #efc1bd; color: #c2535c; border-radius: 12px; font-weight: 850; font-size: 13px; min-height: 44px; }
+
+    /* 05. 店舗の検索・並び替えはカード一覧のすぐ前に配置する。 */
+    .listing-head { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+    .count { color: #68919a; font-size: 13px; font-weight: 850; }
+    .filter-row { display: grid; grid-template-columns: minmax(210px,1fr) auto; gap: 11px; margin-bottom: 20px; }
+    .input-wrap { position: relative; }
+    .input-wrap::before { content:""; display: block; position: absolute; width: 13px; height: 13px; border: 2px solid #82a5af; border-radius: 50%; top: 17px; left: 17px; pointer-events: none; }
+    .input-wrap::after { content:""; position:absolute; height:8px; width:2px; top:30px;left:32px; background:#82a5af; transform:rotate(-45deg);pointer-events:none; }
+    .text-input, .sort-input { border: 1px solid #d1e4e8; background: #fff; border-radius: 14px; min-height: 51px; padding: 13px 15px; width: 100%; color: var(--ink); font-size: 14px; }
+    .text-input { padding-left: 48px; }
+    .sort-input { min-width: 195px; font-weight: 700; }
+    .card-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+    .place-card { display: flex; flex-direction: column; min-width: 0; padding: 21px; border: 1px solid #d9e9eb; border-radius: 22px; background: #fff; box-shadow: 0 6px 24px rgba(14,73,82,.045); transition: transform .16s, box-shadow .16s, border-color .16s; scroll-margin-top: 20px; }
+    .place-card:hover { transform: translateY(-2px); box-shadow: 0 12px 29px rgba(15,80,93,.11); }
+    .place-card.is-selected { border-color: #ef7b7c; box-shadow: 0 0 0 3px #ffdedb, 0 10px 25px rgba(238,111,113,.11); }
+    .place-top { display: flex; align-items: start; gap: 11px; }
+    .number-badge { flex: 0 0 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: white; background: #138fb3; font-size: 18px; font-weight: 900; letter-spacing: -.06em; }
+    .number-badge.long { font-size: 12px; }
+    .place-heading { flex: 1; min-width: 0; }
+    .place-name { font-size: 15px; font-weight: 950; line-height: 1.38; min-height: 42px; margin: 0; overflow-wrap: anywhere; }
+    .distance { display: inline-block; color: #19889e; background: #eaf9fb; border-radius: 6px; font-size: 11px; font-weight: 850; margin-top: 5px; padding: 4px 7px; }
+    .place-fields { margin: 19px 0 0; }
+    .field-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; padding: 8px 0; border-bottom: 1px solid #edf3f4; font-size: 12px; line-height: 1.65; }
+    .field-row:last-child { border-bottom: 0; }
+    .field-label { color: #729096; font-weight: 800; flex: 0 0 69px; }
+    .field-value { flex: 1 1 140px; font-weight: 800; overflow-wrap: anywhere; }
+    .place-note { margin-top: 13px; padding: 9px 11px; color: #687b80; font-size: 11px; line-height: 1.6; background: #f4f8f8; border-radius: 9px; }
+    .place-note.caution { color: #875c35; background: #fff7e9; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; padding-top: 19px; }
+    .action { display: inline-flex; justify-content: center; align-items: center; text-align: center; min-height: 47px; padding: 8px 9px; font-size: 12px; font-weight: 900; border-radius: 11px; border: 1px solid #b9dce2; text-decoration: none; line-height: 1.45; }
+    .action.view { color: #08708a; background: #eaf9fb; }
+    .action.route { color: #fff; background: #158fa6; border-color: #158fa6; }
+    .action:hover { filter: brightness(.97); }
+    .source-link { display: block; width: fit-content; margin-top: 13px; padding: 5px 0 0; font-size: 11px; color: #6e949b; text-underline-offset: 3px; }
+    .empty { background: #fff; border: 1px dashed #adcfd1; text-align: center; border-radius: 18px; padding: 32px 20px; margin-top: 13px; }
+    .empty[hidden] { display: none; }
+    .empty p { color: var(--muted); }
+
+    /* 06. 地図上のピンは座標を変えずにCSSだけで視認性を上げる。 */
+    .map-pin { display: grid; place-items: center; width: 43px; height: 43px; border-radius: 15px 15px 15px 4px; transform: rotate(-45deg); background: #168fb8; color: #fff; border: 3px solid #fff; box-shadow: 0 3px 0 #075a75, 0 6px 17px rgba(4,57,80,.23); transition: background .15s, filter .15s; }
+    .map-pin span { transform: rotate(45deg); font-size: 14px; font-weight: 950; white-space: nowrap; }
+    .map-pin span.small { font-size: 11px; }
+    .map-pin.is-active { background: #ee7475; filter: drop-shadow(0 0 6px #ed767b); }
+    .map-pin.is-group { background: #168fb8; }
+    .map-pin.is-group span { font-size: 10px; }
+    .map-pin.hotel { width: 51px; height: 51px; border-radius: 17px 17px 17px 4px; background: #e75d66; box-shadow: 0 4px 0 #a23b46, 0 7px 18px #a23b4655; }
+    .map-pin.hotel span { font-size: 18px; }
+    .leaflet-div-icon { border: none; background: none; }
+    .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: 0 6px 25px #16485429; }
+    .leaflet-popup-content { margin: 16px; min-width: 190px; max-width: 240px; font-family: inherit; }
+    .popup-name { margin: 0 0 8px; color: #164854; font-size: 14px; line-height: 1.5; font-weight: 900; }
+    .popup-muted { margin: 0 0 9px; color: #63818a; font-size: 12px; line-height: 1.6; }
+    .popup-button { background: #168da6; color: #fff; border: 0; border-radius: 8px; padding: 9px 11px; width: 100%; text-align: center; font-size: 12px; font-weight: 800; min-height: 40px; }
+    .popup-choice { display: block; margin-top: 6px; width: 100%; border: 1px solid #bedee1; border-radius: 8px; background: #f1fbfc; padding: 10px; text-align: left; font-size: 12px; color: #126b7e; font-weight: 850; }
+    .leaflet-container { font-family: inherit; }
+
+    /* 07. 注意事項は分かりやすくし、確認元のリンクも提供する。 */
+    .footnotes { border-top: 1px solid #dcecec; margin-top: 34px; padding: 23px 0 0; line-height: 1.85; font-size: 12px; color: #667e83; }
+    .footnotes strong { color: var(--ink); }
+    .footnotes p { margin: 0 0 8px; }
+    .copyright { margin-top: 22px; font-size: 11px; color: #86a0a3; }
+    .map-external { color: #0a7386; }
+
+    /* 08. iPadとスマートフォンではカードや余白を読みやすく組み替える。 */
+    @media (max-width: 990px) { .card-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 650px) {
+      .shell { width: calc(100% - 25px); }
+      .hero { padding: 17px 0 24px; }
+      .topline { margin-bottom: 17px; }
+      .brand { font-size: 12px; }
+      .brand-mark { width: 34px; height: 34px; font-size: 15px; border-radius: 11px; }
+      .trip-tag { padding: 8px 10px; font-size: 10px; }
+      .hero-copy { margin-top: 8px; }
+      .hero-foot { margin-top: 16px; gap: 6px; }
+      .hero-pill { padding: 7px 9px; font-size: 10px; }
+      main { padding-top: 21px; }
+      .map-heading { align-items: start; }
+      .map-tools { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+      .tool-button { padding: 0 8px; font-size: 12px; min-height: 44px; }
+      .map-frame { border-radius: 19px; }
+      #map { height: min(66svh, 640px); min-height: 455px; }
+      .map-status { top: 11px; left: 11px; font-size: 11px; padding: 8px 10px; }
+      .map-caption { gap: 10px 15px; }
+      .map-hint { flex-basis: 100%; }
+      .hotel-card { gap: 12px; margin: 18px 0 32px; padding: 15px; flex-wrap: wrap; }
+      .hotel-emblem { flex-basis: 44px; height: 44px; border-radius: 13px; font-size: 18px; }
+      .hotel-text { flex: 1 1 calc(100% - 56px); }
+      .hotel-text h3 { font-size: 15px; }
+      .hotel-action { margin-left: 56px; width: calc(100% - 56px); }
+      .card-grid { grid-template-columns: 1fr; gap: 13px; }
+      .place-card { padding: 17px; }
+      .place-name { min-height: auto; font-size: 16px; }
+      .filter-row { grid-template-columns: 1fr; gap: 9px; }
+      .sort-input { width: 100%; }
+      .actions { gap: 9px; }
+      .action { font-size: 13px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="shell hero-inner">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">W</span><span>WAIKIKI MORNING GUIDE</span></div>
+        <span class="trip-tag">HAWAII 社員旅行 2026</span>
+      </div>
+      <h1>ワイキキ朝食<br class="mobile-break">レストランマップ</h1>
+      <p class="hero-copy">ホテルから近い朝食スポットを探そう！</p>
+      <div class="hero-foot">
+        <span class="hero-pill">宿泊先 + 朝食9店舗</span>
+        <span class="hero-pill">操作できる地図</span>
+        <span class="hero-pill">Googleマップ徒歩案内</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section aria-labelledby="map-title">
+      <div class="map-heading">
+        <div>
+          <p class="eyebrow section-label">EXPLORE THE NEIGHBORHOOD</p>
+          <h2 id="map-title">まずは地図でチェック</h2>
+        </div>
+        <div class="map-tools" aria-label="地図の操作">
+          <button id="home-button" class="tool-button hot" type="button">宿泊ホテルに戻る</button>
+          <button id="all-button" class="tool-button" type="button">全店舗を表示</button>
+        </div>
+      </div>
+      <div class="map-frame">
+        <div id="map" role="application" aria-label="ワイキキの宿泊ホテルと朝食レストランの操作可能な地図"></div>
+        <div class="map-status" id="map-status">赤 = <strong>宿泊ホテル</strong> / 青 = 朝食スポット</div>
+        <div id="map-error" class="map-error" hidden>
+          <strong>地図を読み込めませんでした</strong>
+          <p>通信環境を確認して再読み込みしてください。店舗一覧からGoogleマップの徒歩ルートは引き続き利用できます。</p>
+          <a class="map-external" href="https://www.openstreetmap.org/#map=15/21.280/-157.832" target="_blank" rel="noopener noreferrer">OpenStreetMapで周辺地図を開く</a>
+        </div>
+      </div>
+      <div class="map-caption" aria-label="地図の凡例">
+        <span class="legend"><i class="dot red" aria-hidden="true"></i>ローマーハウス・ワイキキ</span>
+        <span class="legend"><i class="dot" aria-hidden="true"></i>朝食レストラン</span>
+        <p class="map-hint">地図は指で拡大・移動できる。⑤と⑧は同じ施設内なので、重なっている場合はピンを押して店を選ぼう。位置が施設代表地点の場合は各カードに明記。</p>
+      </div>
+    </section>
+
+    <section class="hotel-card" aria-labelledby="hotel-title">
+      <div class="hotel-emblem" aria-hidden="true">H</div>
+      <div class="hotel-text">
+        <span class="hotel-overline">OUR HOME BASE / 宿泊ホテル</span>
+        <h3 id="hotel-title">ローマーハウス・ワイキキ</h3>
+        <p>Romer House Waikiki ・ 415 Nahua St, Honolulu, HI 96815</p>
+      </div>
+      <button id="hotel-card-button" class="hotel-action" type="button">地図でホテルを見る</button>
+    </section>
+
+    <section aria-labelledby="listing-title" id="restaurants">
+      <div class="listing-head">
+        <div>
+          <p class="eyebrow section-label">YOUR BREAKFAST OPTIONS</p>
+          <h2 id="listing-title">朝食レストラン一覧</h2>
+        </div>
+        <span class="count" id="result-count" aria-live="polite">全9店舗</span>
+      </div>
+      <div class="filter-row">
+        <div class="input-wrap">
+          <input class="text-input" type="search" id="search" placeholder="店舗名・ホテル名で検索" aria-label="店舗名や所在施設名で検索" autocomplete="off">
+        </div>
+        <select class="sort-input" id="sort" aria-label="店舗一覧を並べ替える">
+          <option value="number">番号順で表示</option>
+          <option value="early">営業時間の早い順</option>
+          <option value="near">ホテルから近い順 (直線)</option>
+        </select>
+      </div>
+      <div class="card-grid" id="restaurant-list"></div>
+      <div class="empty" id="empty" hidden>
+        <strong>該当する店舗が見つからなかった</strong>
+        <p>別の店名やホテル名で検索してみよう。</p>
+        <button type="button" class="tool-button" id="clear-search">検索をクリアする</button>
+      </div>
+    </section>
+
+    <footer class="footnotes">
+      <p><strong>営業時間について</strong>：表示している朝食営業時間は旅行案内に記載された情報であり、最新の営業時間を保証するものではない。来店前に店舗・施設へ確認してほしい。月～金などの曜日条件も旅行案内どおりに表示している。</p>
+      <p><strong>ピンの位置について</strong>：公開されている地図データから確認した店舗地点、またはレストランが入る施設の確認済み代表地点を使用。施設の中の階数・入口・座席位置まで示すものではない。「直線距離」はホテルからの概算で、実際の徒歩距離・所要時間ではない。</p>
+      <p><strong>徒歩ルートについて</strong>：Googleマップの徒歩経路が別タブで開く。目的地の入口・道路事情はGoogleマップ側で確認してほしい。地図表示にはインターネット接続が必要。</p>
+      <p><strong>確認情報の扱い</strong>：各カードの「確認元」から公式サイトなどを確認できる。①FRESCOには第三者サイトに閉店表示があり、公式掲載情報と食い違いが見られるため、訪問前の営業確認を特に推奨する。</p>
+      <p class="copyright">Hawaii company trip 2026 ・ Map data © OpenStreetMap contributors ・ Map powered by Leaflet</p>
+    </footer>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    "use strict";
+
+    /* 09. ホテル座標は所在地と対応する公開地理情報で照合した値。 */
+    const HOTEL = Object.freeze({
+      name: "ローマーハウス・ワイキキ",
+      address: "415 Nahua St, Honolulu, HI 96815, USA",
+      lat: 21.279347,
+      lng: -157.825271
+    });
+
+    /* 10. 9店舗の座標は事前調査済み。施設代表地点にはisFacilityPointを立てて区別する。
+       ソースの詳細は同梱する LOCATION_SOURCES.md を参照すること。
+       店舗番号は旅行案内に合わせ、④だけ枝番 A/B を持たせる。 */
+    const RESTAURANTS = Object.freeze([
+      {
+        id: "1", no: "①", name: "FRESCO ITALIAN RESTAURANT", hours: "7:00～11:00", open: 420,
+        facility: "ヒルトン・ハワイアン・ビレッジ / レインボーバザール2階",
+        address: "2005 Kalia Rd, Rainbow Bazaar 2F, Honolulu, HI 96815, USA",
+        destination: "Fresco Italian Restaurant, 2005 Kalia Rd, Honolulu, HI 96815, USA",
+        lat: 21.2830357, lng: -157.8374914, isFacilityPoint: false,
+        note: "公式施設ページには掲載あり。一部の第三者サイトに閉店表示があるため、来店前に営業確認を推奨。",
+        caution: true,
+        source: "https://hiltonhawaiianvillage.com/dine/more-restaurants/"
+      },
+      {
+        id: "2", no: "②", name: "ILIMA CAFÉ", hours: "6:00～10:30", open: 360,
+        facility: "ワイキキリゾートホテル / ロビー階",
+        address: "2460 Koa Ave, Honolulu, HI 96815, USA",
+        destination: "Ilima Cafe, Waikiki Resort Hotel, 2460 Koa Ave, Honolulu, HI 96815, USA",
+        lat: 21.27531, lng: -157.82361, isFacilityPoint: true,
+        note: "ホテルの確認済み代表地点。レストランはホテルのロビー階。",
+        caution: false,
+        source: "https://www.waikikiresort.com/dining/ilima"
+      },
+      {
+        id: "3", no: "③", name: "TR FIRE GRILL", hours: "6:00～10:00", open: 360,
+        facility: "ヒルトン・ガーデン・イン・ワイキキビーチ / ロビー階",
+        address: "2330 Kuhio Ave, Honolulu, HI 96815, USA",
+        destination: "TR Fire Grill, Hilton Garden Inn Waikiki Beach, 2330 Kuhio Ave, Honolulu, HI 96815, USA",
+        lat: 21.27894, lng: -157.8251, isFacilityPoint: true,
+        note: "ホテルの確認済み代表地点。レストランはロビー階。",
+        caution: false,
+        source: "https://www.hilton.com/en/hotels/hnlkugi-hilton-garden-inn-waikiki-beach/dining/"
+      },
+      {
+        id: "4a", no: "④-A", name: "IHOP", hours: "6:00～22:00", open: 360,
+        facility: "ワイキキマリアホテル / 1階",
+        address: "2211 Kuhio Ave, Honolulu, HI 96815, USA",
+        destination: "IHOP, 2211 Kuhio Ave, Honolulu, HI 96815, USA",
+        lat: 21.28086, lng: -157.82833, isFacilityPoint: true,
+        note: "ワイキキマリアの建物中心を表示。IHOPは1階にある。",
+        caution: false,
+        source: "https://restaurants.ihop.com/en-us/hi/honolulu/breakfast-2211-kuhio-ave-3133"
+      },
+      {
+        id: "4b", no: "④-B", name: "IHOP", hours: "6:00～21:00", open: 360,
+        facility: "アクアパームス・ワイキキ / ホテル入口",
+        address: "1850 Ala Moana Blvd, Honolulu, HI 96815, USA",
+        destination: "IHOP, 1850 Ala Moana Blvd, Honolulu, HI 96815, USA",
+        lat: 21.2849608, lng: -157.8365560, isFacilityPoint: false,
+        note: "IHOPの公開地理データにある店舗地点。",
+        caution: false,
+        source: "https://restaurants.ihop.com/en-us/hi/honolulu/breakfast-1850-ala-moana-blvd-3246"
+      },
+      {
+        id: "5", no: "⑤", name: "DUKE’S CANOE CLUB", hours: "7:00～10:30", open: 420,
+        facility: "アウトリガー・ワイキキ・ビーチ・リゾート / 海側",
+        address: "2335 Kalakaua Ave, Suite 116, Honolulu, HI 96815, USA",
+        destination: "Duke's Waikiki, 2335 Kalakaua Ave, Honolulu, HI 96815, USA",
+        lat: 21.2768421, lng: -157.8277917, isFacilityPoint: false,
+        note: "公式サイトでの店舗名は Duke's Waikiki。⑧と同じホテル内にある。",
+        caution: false,
+        source: "https://www.dukeswaikiki.com/contact/"
+      },
+      {
+        id: "6", no: "⑥", name: "HEAVENLY ISLAND LIFESTYLE", hours: "7:00～14:00", open: 420,
+        facility: "ショアライン・ホテル・ワイキキ / 1階",
+        address: "342 Seaside Ave, Honolulu, HI 96815, USA",
+        destination: "Heavenly Island Lifestyle, 342 Seaside Ave, Honolulu, HI 96815, USA",
+        lat: 21.27985, lng: -157.82782, isFacilityPoint: true,
+        note: "ホテルの確認済み代表地点。店舗は1階にある。",
+        caution: false,
+        source: "https://www.heavenly-waikiki.com/"
+      },
+      {
+        id: "7", no: "⑦", name: "Cafe 410", hours: "月～金 6:30～10:00 / 土日 7:00～10:30", open: 390,
+        facility: "アラモアナ・ホテル",
+        address: "410 Atkinson Dr, Honolulu, HI 96814, USA",
+        destination: "Cafe 410, Ala Moana Hotel, 410 Atkinson Dr, Honolulu, HI 96814, USA",
+        lat: 21.2901918, lng: -157.83968, isFacilityPoint: true,
+        note: "ホテル公式掲載のGPS地点。土日は7:00開始。",
+        caution: false,
+        source: "https://www.alamoanahotelhonolulu.com/dining/cafe-410/"
+      },
+      {
+        id: "8", no: "⑧", name: "HULA GRILL", hours: "7:00～11:00 (月～金)", open: 420,
+        facility: "アウトリガー・ワイキキ・ビーチ・リゾート / 2階",
+        address: "2335 Kalakaua Ave, Suite 203, Honolulu, HI 96815, USA",
+        destination: "Hula Grill Waikiki, 2335 Kalakaua Ave, Honolulu, HI 96815, USA",
+        lat: 21.2769825, lng: -157.8277491, isFacilityPoint: false,
+        note: "公式サイトは毎日7:00から営業と案内。旅行案内の曜日条件と異なるため、利用前に要確認。⑤と同じホテル内。",
+        caution: true,
+        source: "https://www.hulagrillwaikiki.com/contact/"
+      }
+    ]);
+
+    /* 11. 画面表示と地図を制御する状態をまとめる。 */
+    const ui = {
+      map: null,
+      hotelMarker: null,
+      restaurantMarkers: new Map(),
+      restaurantLayer: null,
+      selected: null,
+      filtered: RESTAURANTS,
+      tileErrors: 0
+    };
+
+    /**
+     * escapeHtml(value)
+     * HTMLへ店名などを埋め込む前に特殊文字をエスケープする。
+     * 現時点では固定データのみだが、将来データを追加するときも安全に表示できる。
+     */
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[character]));
+    }
+
+    /**
+     * getStraightLineMeters(place)
+     * 既知のホテル・店舗座標から2地点間の球面直線距離を求める。
+     * 道路に沿った徒歩距離ではないため、UIでは必ず「直線」と表記する。
+     */
+    function getStraightLineMeters(place) {
+      const radius = 6371000;
+      const radians = degree => degree * Math.PI / 180;
+      const latDiff = radians(place.lat - HOTEL.lat);
+      const lngDiff = radians(place.lng - HOTEL.lng);
+      const a = Math.sin(latDiff / 2) ** 2 +
+        Math.cos(radians(HOTEL.lat)) * Math.cos(radians(place.lat)) * Math.sin(lngDiff / 2) ** 2;
+      return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    /**
+     * getDistanceLabel(place)
+     * おおまかな位置関係を読み取りやすくするため、距離を10m単位で丸める。
+     */
+    function getDistanceLabel(place) {
+      const meters = Math.round(getStraightLineMeters(place) / 10) * 10;
+      return meters >= 1000 ? `直線 約${(meters / 1000).toFixed(1)}km` : `直線 約${meters}m`;
+    }
+
+    /**
+     * getWalkingUrl(place)
+     * 出発地は宿泊ホテル、到着地は店舗名と確認済み住所で指定する。
+     * クリック後にGoogleマップへ引き継ぎ、現地の徒歩経路をGoogle側で計算する。
+     */
+    function getWalkingUrl(place) {
+      const params = new URLSearchParams({
+        api: "1",
+        origin: `Romer House Waikiki, ${HOTEL.address}`,
+        destination: place.destination,
+        travelmode: "walking"
+      });
+      return `https://www.google.com/maps/dir/?${params.toString()}`;
+    }
+
+    /**
+     * buildRestaurantCard(place)
+     * 9店舗それぞれの営業時間・施設・2つの操作ボタンをカードに描く。
+     * 正確性に関する注記と情報源へのリンクもカード単位で保持する。
+     */
+    function buildRestaurantCard(place) {
+      const selected = ui.selected === place.id;
+      const noteClass = place.caution ? "place-note caution" : "place-note";
+      return `<article class="place-card${selected ? " is-selected" : ""}" id="card-${place.id}" data-place="${place.id}">
+        <div class="place-top">
+          <span class="number-badge${place.no.length > 1 ? " long" : ""}">${escapeHtml(place.no)}</span>
+          <div class="place-heading">
+            <h3 class="place-name">${escapeHtml(place.name)}</h3>
+            <span class="distance">${getDistanceLabel(place)}</span>
+          </div>
+        </div>
+        <div class="place-fields">
+          <div class="field-row"><span class="field-label">朝食時間</span><span class="field-value">${escapeHtml(place.hours)}</span></div>
+          <div class="field-row"><span class="field-label">所在施設</span><span class="field-value">${escapeHtml(place.facility)}</span></div>
+        </div>
+        <div class="${noteClass}">${escapeHtml(place.note)}</div>
+        <div class="actions">
+          <button type="button" class="action view" data-view="${place.id}" aria-label="${escapeHtml(place.name)}を地図で見る">地図で見る</button>
+          <a class="action route" href="${getWalkingUrl(place)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(place.name)}までの徒歩ルートをGoogleマップで表示">徒歩ルートを表示</a>
+        </div>
+        <a class="source-link" href="${place.source}" target="_blank" rel="noopener noreferrer">店舗・施設の確認元を開く</a>
+      </article>`;
+    }
+
+    /**
+     * getVisibleRestaurants()
+     * 検索文字列と並び替え条件を適用した店舗の配列を返す。
+     * sort()は元の固定データを書き換えないよう複製した配列に対して実行する。
+     */
+    function getVisibleRestaurants() {
+      const keyword = document.getElementById("search").value.trim().toLocaleLowerCase();
+      const sortType = document.getElementById("sort").value;
+      const visible = RESTAURANTS.filter(place =>
+        `${place.name} ${place.facility} ${place.no}`.toLocaleLowerCase().includes(keyword)
+      );
+      if (sortType === "early") {
+        visible.sort((left, right) => left.open - right.open || RESTAURANTS.indexOf(left) - RESTAURANTS.indexOf(right));
+      } else if (sortType === "near") {
+        visible.sort((left, right) => getStraightLineMeters(left) - getStraightLineMeters(right));
+      }
+      return visible;
+    }
+
+    /**
+     * renderRestaurants()
+     * 起動時・検索時・並び替え時にカードを描画し、地図のピン表示も連動させる。
+     */
+    function renderRestaurants() {
+      ui.filtered = getVisibleRestaurants();
+      document.getElementById("restaurant-list").innerHTML = ui.filtered.map(buildRestaurantCard).join("");
+      document.getElementById("result-count").textContent = `全9店舗中 ${ui.filtered.length}店舗`;
+      document.getElementById("empty").hidden = ui.filtered.length !== 0;
+      synchronizeMapMarkers();
+    }
+
+    /**
+     * makePinIcon(place, active, grouped)
+     * CSSで描いたピンを生成する。マーカーの緯度経度はここでは変更しない。
+     */
+    function makePinIcon(place, active = false, grouped = false) {
+      const label = grouped ? "⑤/⑧" : place.no;
+      const classes = ["map-pin", active ? "is-active" : "", grouped ? "is-group" : ""].join(" ");
+      return L.divIcon({
+        html: `<div class="${classes}"><span class="${label.length > 1 ? "small" : ""}">${label}</span></div>`,
+        iconSize: [43, 43], iconAnchor: [21, 43], popupAnchor: [0, -41],
+        className: "map-pin-wrapper"
+      });
+    }
+
+    /**
+     * getPlacePopup(place)
+     * 地図上でタップした際の店舗詳細。⑤と⑧は一方を選んでも両方へ移れる。
+     */
+    function getPlacePopup(place) {
+      if (place.id === "5" || place.id === "8") {
+        return `<div class="popup-name">アウトリガー内の2店舗</div>
+          <p class="popup-muted">同じホテルにある朝食スポット。確認したい店舗を選ぼう。</p>
+          <button type="button" class="popup-choice" data-popup-view="5">⑤ DUKE’S CANOE CLUB</button>
+          <button type="button" class="popup-choice" data-popup-view="8">⑧ HULA GRILL (2階)</button>`;
+      }
+      return `<div class="popup-name">${escapeHtml(place.no)} ${escapeHtml(place.name)}</div>
+        <p class="popup-muted">朝食 ${escapeHtml(place.hours)}<br>${escapeHtml(place.facility)}</p>
+        <button class="popup-button" type="button" data-popup-view="${place.id}">店舗カードを確認</button>`;
+    }
+
+    /**
+     * syncMarkerSelection()
+     * 選択中の店舗だけ色を強調し、それ以外は青色ピンとして表示する。
+     */
+    function syncMarkerSelection() {
+      if (!ui.map) return;
+      const visibleIds = new Set(ui.filtered.map(place => place.id));
+      const grouped = visibleIds.has("5") && visibleIds.has("8") && ui.map.getZoom() < 19;
+      RESTAURANTS.forEach(place => {
+        const marker = ui.restaurantMarkers.get(place.id);
+        const active = ui.selected === place.id || (grouped && place.id === "5" && ui.selected === "8");
+        if (marker) marker.setIcon(makePinIcon(place, active, grouped && place.id === "5"));
+      });
+      document.querySelectorAll(".place-card").forEach(card => {
+        card.classList.toggle("is-selected", card.dataset.place === ui.selected);
+      });
+    }
+
+    /**
+     * synchronizeMapMarkers()
+     * 検索結果に一致する店舗のみ地図で表示する。宿泊ホテルは常に地図上に残す。
+     * ⑤と⑧は同じ建物なので、縮尺が広いときは⑤に両方の番号を表示する。
+     */
+    function synchronizeMapMarkers() {
+      if (!ui.map) return;
+      const visibleIds = new Set(ui.filtered.map(place => place.id));
+      const bothOutrigger = visibleIds.has("5") && visibleIds.has("8");
+      const detailed = ui.map.getZoom() >= 19;
+      RESTAURANTS.forEach(place => {
+        const marker = ui.restaurantMarkers.get(place.id);
+        if (!marker) return;
+        const shouldDisplay = visibleIds.has(place.id) && !(bothOutrigger && place.id === "8" && !detailed);
+        if (shouldDisplay && !ui.restaurantLayer.hasLayer(marker)) ui.restaurantLayer.addLayer(marker);
+        if (!shouldDisplay && ui.restaurantLayer.hasLayer(marker)) ui.restaurantLayer.removeLayer(marker);
+        const grouped = bothOutrigger && place.id === "5" && !detailed;
+        const active = ui.selected === place.id || (grouped && ui.selected === "8");
+        marker.setIcon(makePinIcon(place, active, grouped));
+      });
+    }
+
+    /**
+     * showHotel()
+     * 「ホテルに戻る」で赤い宿泊先ピンへ地図を戻し、所在地ポップアップを開く。
+     */
+    function showHotel() {
+      if (!ui.map) { document.getElementById("map-error").hidden = false; return; }
+      ui.selected = null;
+      syncMarkerSelection();
+      ui.map.flyTo([HOTEL.lat, HOTEL.lng], Math.max(ui.map.getZoom(), 17), { duration: .65 });
+      setTimeout(() => ui.hotelMarker.openPopup(), 700);
+      document.querySelector(".map-frame").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    /**
+     * showAll()
+     * 全ピンを収めた状態へ地図を戻す。検索中でも「全店舗を表示」は全件を復元する。
+     */
+    function showAll() {
+      document.getElementById("search").value = "";
+      ui.selected = null;
+      renderRestaurants();
+      if (!ui.map) return;
+      const positions = [[HOTEL.lat, HOTEL.lng], ...RESTAURANTS.map(place => [place.lat, place.lng])];
+      ui.map.closePopup();
+      ui.map.fitBounds(L.latLngBounds(positions).pad(.09), { padding: [24, 24], maxZoom: 15, animate: true });
+      document.querySelector(".map-frame").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    /**
+     * selectRestaurant(id, scrollToMap)
+     * カードで店舗を選ぶと、実座標へ地図を移動しピンを強調する。
+     * ポップアップからの選択時は、対応カードの確認にも使える。
+     */
+    function selectRestaurant(id, scrollToMap = true) {
+      const place = RESTAURANTS.find(entry => entry.id === id);
+      if (!place) return;
+      ui.selected = id;
+      if (ui.map) {
+        ui.map.flyTo([place.lat, place.lng], Math.max(ui.map.getZoom(), 17), { duration: .65 });
+        syncMarkerSelection();
+        synchronizeMapMarkers();
+        setTimeout(() => {
+          const marker = ui.restaurantMarkers.get(id);
+          const groupedMarker = ui.restaurantMarkers.get("5");
+          if (marker && ui.restaurantLayer.hasLayer(marker)) {
+            marker.openPopup();
+          } else if (id === "8" && groupedMarker && ui.restaurantLayer.hasLayer(groupedMarker)) {
+            groupedMarker.openPopup();
+          }
+        }, 700);
+        if (scrollToMap) document.querySelector(".map-frame").scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      const card = document.getElementById(`card-${id}`);
+      if (card) card.classList.add("is-selected");
+      if (!scrollToMap && card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    /**
+     * showMapError()
+     * ライブラリ読み込みに失敗した場合も空白画面にせず、外部地図とカードを使えるようにする。
+     */
+    function showMapError() {
+      document.getElementById("map-error").hidden = false;
+      document.getElementById("map-status").hidden = true;
+    }
+
+    /**
+     * initializeMap()
+     * Leaflet + OpenStreetMapタイルでズーム・移動可能な実地図を構築する。
+     * 既存の緯度経度を使い、初期表示ではホテルと全店舗が収まるようfitBoundsする。
+     */
+    function initializeMap() {
+      if (!window.L) { showMapError(); return; }
+      try {
+        ui.map = L.map("map", { zoomControl: false, scrollWheelZoom: true, preferCanvas: false });
+        L.control.zoom({ position: "bottomright", zoomInTitle: "拡大", zoomOutTitle: "縮小" }).addTo(ui.map);
+        const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>'
+        }).addTo(ui.map);
+        tileLayer.on("tileerror", () => {
+          ui.tileErrors += 1;
+          if (ui.tileErrors >= 12) showMapError();
+        });
+        tileLayer.on("tileload", () => { ui.tileErrors = 0; });
+        ui.restaurantLayer = L.layerGroup().addTo(ui.map);
+        L.circle([HOTEL.lat, HOTEL.lng], {
+          radius: 72, color: "#ed7377", opacity: .52, weight: 2, fillColor: "#ed7377", fillOpacity: .095, interactive: false
+        }).addTo(ui.map);
+        ui.hotelMarker = L.marker([HOTEL.lat, HOTEL.lng], {
+          icon: L.divIcon({
+            html: '<div class="map-pin hotel"><span>H</span></div>',
+            iconSize: [51, 51], iconAnchor: [25, 51], popupAnchor: [0, -48], className: "map-pin-wrapper"
+          }), zIndexOffset: 1400, title: HOTEL.name
+        }).addTo(ui.map);
+        ui.hotelMarker.bindPopup(`<div class="popup-name">宿泊先：${escapeHtml(HOTEL.name)}</div><p class="popup-muted">${escapeHtml(HOTEL.address)}</p>`);
+        RESTAURANTS.forEach(place => {
+          const marker = L.marker([place.lat, place.lng], {
+            icon: makePinIcon(place),
+            title: `${place.no} ${place.name}`, keyboard: true
+          });
+          marker.bindPopup(getPlacePopup(place), { maxWidth: 270 });
+          marker.on("click", () => {
+            ui.selected = place.id;
+            syncMarkerSelection();
+          });
+          ui.restaurantMarkers.set(place.id, marker);
+        });
+        ui.map.on("zoomend", synchronizeMapMarkers);
+        const positions = [[HOTEL.lat, HOTEL.lng], ...RESTAURANTS.map(place => [place.lat, place.lng])];
+        ui.map.fitBounds(L.latLngBounds(positions).pad(.09), { padding: [30, 30], maxZoom: 15, animate: false });
+        synchronizeMapMarkers();
+      } catch (error) {
+        console.error("Map initialization error:", error);
+        showMapError();
+      }
+    }
+
+    /**
+     * bindEvents()
+     * タッチ操作・クリック・入力をそれぞれの機能へ結び付ける。
+     * カードは並び替え時に再生成するため、イベント委譲で扱う。
+     */
+    function bindEvents() {
+      document.getElementById("search").addEventListener("input", renderRestaurants);
+      document.getElementById("sort").addEventListener("change", renderRestaurants);
+      document.getElementById("home-button").addEventListener("click", showHotel);
+      document.getElementById("hotel-card-button").addEventListener("click", showHotel);
+      document.getElementById("all-button").addEventListener("click", showAll);
+      document.getElementById("clear-search").addEventListener("click", () => {
+        document.getElementById("search").value = "";
+        renderRestaurants();
+        document.getElementById("search").focus();
+      });
+      document.addEventListener("click", event => {
+        const button = event.target.closest("[data-view], [data-popup-view]");
+        if (!button) return;
+        if (button.dataset.view) selectRestaurant(button.dataset.view, true);
+        if (button.dataset.popupView) selectRestaurant(button.dataset.popupView, false);
+      });
+    }
+
+    /* 12. DOMが構築された後にUIを描画し、地図と操作イベントを初期化する。 */
+    bindEvents();
+    renderRestaurants();
+    initializeMap();
+  </script>
+</body>
+</html>
